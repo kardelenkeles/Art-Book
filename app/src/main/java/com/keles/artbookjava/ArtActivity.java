@@ -44,7 +44,34 @@ public class ArtActivity extends AppCompatActivity {
 
     public void save(View view) {
 
+        String name = binding.nameText.getText().toString();
+        String artistName = binding.artistText.getText().toString();
+        String year = binding.yearText.getText().toString();
 
+        Bitmap smallImage = makeSmallerImage(selectedImage,300);
+
+
+
+
+    }
+
+    public Bitmap makeSmallerImage(Bitmap image, int maximumSize){
+
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        float bitmapRatio = (float) width / (float) height;
+
+        if(bitmapRatio > 1){
+            width = maximumSize;
+            height = (int) (width / bitmapRatio);
+        }else{
+            height = maximumSize;
+            width = (int) (height * bitmapRatio);
+
+        }
+
+        return image.createScaledBitmap(image, width, height,true );
     }
 
     public void selectImage(View view) {
