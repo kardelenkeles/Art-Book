@@ -1,2 +1,11 @@
-package com.keles.artbookjava;public class Art {
+package com.keles.artbookjava;
+
+public class Art {
+    String name;
+    int id;
+
+    public Art(String name, int id) {
+        this.name = name;
+        this.id = id;
+    }
 }

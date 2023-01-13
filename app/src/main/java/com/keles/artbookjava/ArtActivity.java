@@ -11,6 +11,8 @@ import androidx.core.content.ContextCompat;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteStatement;
 import android.graphics.Bitmap;
 import android.graphics.ImageDecoder;
 import android.net.Uri;
@@ -23,12 +25,15 @@ import android.widget.Toast;
 import com.google.android.material.snackbar.Snackbar;
 import com.keles.artbookjava.databinding.ActivityArtBinding;
 
+import java.io.ByteArrayOutputStream;
+
 public class ArtActivity extends AppCompatActivity {
 
     private ActivityArtBinding binding;
     ActivityResultLauncher<Intent> activityResultLauncher;
     ActivityResultLauncher<String> permissionLauncher;
     Bitmap selectedImage;
+    SQLiteDatabase database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,30 +53,51 @@ public class ArtActivity extends AppCompatActivity {
         String artistName = binding.artistText.getText().toString();
         String year = binding.yearText.getText().toString();
 
-        Bitmap smallImage = makeSmallerImage(selectedImage,300);
+        Bitmap smallImage = makeSmallerImage(selectedImage, 300);
 
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        smallImage.compress(Bitmap.CompressFormat.PNG, 50, outputStream);
+        byte[] byteArray = outputStream.toByteArray();
 
+        try {
 
+            database = this.openOrCreateDatabase("Arts", MODE_PRIVATE, null);
+            database.execSQL("CREATE TABLE IF NOT EXISTS arts(id INTEGER PRIMARY KEY, artName VARCHAR, painterName VARCHAR, year VARCHAR, image BLOB)");
 
+            String sqLString = "INSERT INTO arts(artName, painterName, year, image) VALUES(?,?,?,?)";
+            SQLiteStatement sqLiteStatement = database.compileStatement(sqLString);
+            sqLiteStatement.bindString(1, name);
+            sqLiteStatement.bindString(2, artistName);
+            sqLiteStatement.bindString(3, year);
+            sqLiteStatement.bindString(4, String.valueOf(byteArray));
+            sqLiteStatement.execute();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        Intent intent = new Intent(ArtActivity.this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
     }
 
-    public Bitmap makeSmallerImage(Bitmap image, int maximumSize){
+    public Bitmap makeSmallerImage(Bitmap image, int maximumSize) {
 
         int width = image.getWidth();
         int height = image.getHeight();
 
         float bitmapRatio = (float) width / (float) height;
 
-        if(bitmapRatio > 1){
+        if (bitmapRatio > 1) {
             width = maximumSize;
             height = (int) (width / bitmapRatio);
-        }else{
+        } else {
             height = maximumSize;
             width = (int) (height * bitmapRatio);
 
         }
 
-        return image.createScaledBitmap(image, width, height,true );
+        return image.createScaledBitmap(image, width, height, true);
     }
 
     public void selectImage(View view) {
@@ -106,7 +132,7 @@ public class ArtActivity extends AppCompatActivity {
                     Intent intentFromResult = result.getData();
                     if (intentFromResult != null) {
                         Uri imageData = intentFromResult.getData();
-//                        binding.imageView.setImageURI(imageData);
+                        binding.imageView.setImageURI(imageData);
 
                         try {
                             if (Build.VERSION.SDK_INT >= 28) {
@@ -114,23 +140,21 @@ public class ArtActivity extends AppCompatActivity {
                                 selectedImage = ImageDecoder.decodeBitmap(source);
                                 binding.imageView.setImageBitmap(selectedImage);
                             } else {
-                                selectedImage = MediaStore.Images.Media.getBitmap(ArtActivity.this.getContentResolver(),imageData);
+                                selectedImage = MediaStore.Images.Media.getBitmap(ArtActivity.this.getContentResolver(), imageData);
                                 binding.imageView.setImageBitmap(selectedImage);
                             }
-                            } catch(Exception e){
-                                e.printStackTrace();
-                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
                     }
-
                 }
-            });
 
-            permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), new ActivityResultCallback<Boolean>()
+            }
+        });
 
-            {
-                @Override
-                public void onActivityResult (Boolean result){
+        permissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), new ActivityResultCallback<Boolean>() {
+            @Override
+            public void onActivityResult(Boolean result) {
 
                 if (result) {
 
@@ -143,7 +167,7 @@ public class ArtActivity extends AppCompatActivity {
                 }
 
             }
-            });
+        });
 
-        }
     }
+}
